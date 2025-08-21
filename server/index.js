@@ -15,7 +15,27 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors({ origin: "*" }));
+
+// CORS configuration to support credentials (cookies, auth headers)
+const allowedOrigins = [
+  process.env.CLIENT_URL || 'http://localhost:5173',
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow non-browser tools (no origin) and whitelisted origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS not allowed for this origin: ' + origin), false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 //health check and status
