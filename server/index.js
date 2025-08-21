@@ -15,8 +15,17 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
+
+//health check and status
+app.get('/', (req, res) => {
+    res.send('Hello World!');
+});
+
+app.get('health', (req, res) => {
+    res.send('OK');
+})
 
 
 app.use('/api/auth', authRoutes);
