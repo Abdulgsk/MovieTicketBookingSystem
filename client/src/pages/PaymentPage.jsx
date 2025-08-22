@@ -20,76 +20,75 @@ const CheckoutForm = ({ bookingId, bookingData }) => {
 
   const handlePayment = async (e) => {
     e.preventDefault();
-
     if (!stripe || !elements) return;
 
     setIsProcessing(true);
     setError(null);
-    const amountInPaise = Math.round(bookingData?.totalAmount * 100);
-    if (!amountInPaise) {
-        setError('Invalid amount');
-        setIsProcessing(false);
-        return;
-    }
+    
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-payment-intent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amountInPaise*100 }) // amount in paise
-      });
-
-      const data = await res.json();
-
-      if (data.error) {
-        setError(data.error.message);
-        setIsProcessing(false);
-        return;
+      const amountInPaise = Math.round(bookingData?.totalAmount * 100);
+      if (!amountInPaise) {
+        throw new Error('Invalid amount');
       }
 
-      const { clientSecret } = data;
+      let clientSecret = window.currentPaymentIntent;
 
       if (!clientSecret) {
-        setError('Failed to get client secret from server.');
-        setIsProcessing(false);
-        return;
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-payment-intent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: amountInPaise })
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        clientSecret = data.clientSecret;
       }
 
-      const result = await stripe.confirmCardPayment(clientSecret, {
+      if (!clientSecret) {
+        throw new Error('Failed to get client secret from server');
+      }
+
+      // Process payment with Stripe
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement),
-          billing_details: {
-            name: 'Test User'
-          }
         }
       });
 
-      if (result.error) {
-        setError(result.error.message);
-      } else if (result.paymentIntent.status === 'succeeded') {
-                const { selectedSeats, showtime } = bookingData;
-
-        // Update reserved seats: remove the seats that are now booked
-        const reservations = JSON.parse(localStorage.getItem('reservedSeats')) || {};
-        selectedSeats.forEach(seat => {
-          delete reservations[seat];
-        });
-        localStorage.setItem('reservedSeats', JSON.stringify(reservations));
-
-        // Update booked seats: add the newly booked seats
-        const allBookedSeats = JSON.parse(localStorage.getItem('bookedSeats')) || {};
-        const showtimeBookedSeats = allBookedSeats[showtime.id] || [];
-        const newBookedSeats = [...new Set([...showtimeBookedSeats, ...selectedSeats])];
-        allBookedSeats[showtime.id] = newBookedSeats;
-        localStorage.setItem('bookedSeats', JSON.stringify(allBookedSeats));
-
-        navigate(`/confirmation/${bookingId}`, { state: { ...bookingData } });
+      if (stripeError) {
+        throw new Error(stripeError.message);
       }
-    } catch (err) {
-      console.error(err);
-      setError('Payment failed. Try again.');
-    }
 
-    setIsProcessing(false);
+      // Update seat reservations
+      const { selectedSeats, showtime } = bookingData;
+      
+      // Update reserved seats
+      const reservations = JSON.parse(localStorage.getItem('reservedSeats')) || {};
+      selectedSeats.forEach(seat => delete reservations[seat]);
+      localStorage.setItem('reservedSeats', JSON.stringify(reservations));
+
+      // Update booked seats
+      const allBookedSeats = JSON.parse(localStorage.getItem('bookedSeats')) || {};
+      const showtimeBookedSeats = allBookedSeats[showtime.id] || [];
+      const newBookedSeats = [...new Set([...showtimeBookedSeats, ...selectedSeats])];
+      allBookedSeats[showtime.id] = newBookedSeats;
+      localStorage.setItem('bookedSeats', JSON.stringify(allBookedSeats));
+      
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      // Store error message to show on success page
+      sessionStorage.setItem('bookingError', error.message);
+    } finally {
+      // Always navigate to success page, which will handle the error state
+      navigate(`/confirmation/${bookingId}`, { 
+        state: { 
+          ...bookingData,
+          error: error?.message 
+        } 
+      });
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -148,17 +147,17 @@ const PaymentPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left: Stripe Payment */}
             <div className="lg:col-span-2">
-              <CheckoutForm bookingId={bookingId} bookingData={bookingData}  />
+              <CheckoutForm bookingId={bookingId} bookingData={bookingData} />
             </div>
 
-            {/* Right: Booking Summary (Unchanged) */}
+            {/* Right: Booking Summary */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h2 className="text-lg font-semibold text-white mb-4">Booking Summary</h2>
               <div className="text-sm text-gray-400">
                 <p><strong>Movie:</strong> {movie?.title}</p>
-                <p><strong>Showtime:</strong> {showtime.date} at {showtime.time}</p>
-                <p><strong>Theater:</strong> {theater.name}</p>
-                <p><strong>Seats:</strong> {selectedSeats.join(', ')}</p>
+                <p><strong>Showtime:</strong> {showtime?.date} at {showtime?.time}</p>
+                <p><strong>Theater:</strong> {theater?.name}</p>
+                <p><strong>Seats:</strong> {selectedSeats?.join(', ')}</p>
                 <p><strong>Total:</strong> ₹{totalAmount}</p>
               </div>
             </div>
