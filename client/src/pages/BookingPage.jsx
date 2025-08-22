@@ -136,7 +136,7 @@ const BookingPage = () => {
     if (seatsForPayment.length === 0) return;
 
     const now = new Date().getTime();
-    const expiry = now + 5 * 60 * 1000; // 5 minutes from now
+    const expiry = now + 10 * 1000; // 10 seconds from now
     const reservations = JSON.parse(localStorage.getItem('reservedSeats')) || {};
 
     seatsForPayment.forEach(seat => {

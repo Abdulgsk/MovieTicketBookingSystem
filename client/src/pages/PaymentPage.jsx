@@ -32,13 +32,27 @@ const CheckoutForm = ({ bookingId, bookingData }) => {
         return;
     }
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payment/create-payment-intent`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-payment-intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: amountInPaise*100 }) // amount in paise
       });
 
-      const { clientSecret } = await res.json();
+      const data = await res.json();
+
+      if (data.error) {
+        setError(data.error.message);
+        setIsProcessing(false);
+        return;
+      }
+
+      const { clientSecret } = data;
+
+      if (!clientSecret) {
+        setError('Failed to get client secret from server.');
+        setIsProcessing(false);
+        return;
+      }
 
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {

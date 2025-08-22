@@ -19,7 +19,7 @@ export const combineAndDeduplicate = (apiData, mockData, idField = 'id') => {
 export const movieService = {
   getMovies: async () => {
     try {
-      const response = await api.get('/movies');
+      const response = await api.get('/api/movies');
       const apiMovies = Array.isArray(response.data) ? response.data : [];
       return combineAndDeduplicate(apiMovies, mockMovies);
     } catch (error) {
@@ -33,7 +33,7 @@ export const movieService = {
     
     try {
       // First try to get from API
-      const response = await api.get(`/movies/${id}`);
+      const response = await api.get(`/api/movies/${id}`);
       if (response.data) {
         return {
           ...response.data,
@@ -68,7 +68,7 @@ export const movieService = {
 export const theaterService = {
   getTheaters: async (city) => {
     try {
-      const response = await api.get('/theaters' + (city ? `?city=${city}` : ''));
+      const response = await api.get('/api/theaters' + (city ? `?city=${city}` : ''));
       const apiTheaters = Array.isArray(response.data) ? response.data : [];
       return combineAndDeduplicate(apiTheaters, mockTheaters, 'id');
     } catch (error) {
@@ -87,7 +87,7 @@ export const theaterService = {
     
     try {
       // First try to get from API
-      const response = await api.get(`/theaters/${id}`);
+      const response = await api.get(`/api/theaters/${id}`);
       if (response.data) {
         return {
           ...response.data,

@@ -27,7 +27,7 @@ const Navbar = () => {
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/movies`);
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/movies`);
         setMovies(response.data);
       } catch (error) {
         console.error('Error fetching movies:', error);
