@@ -35,7 +35,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 app.use(express.json());
 
 //health check and status
@@ -43,10 +42,9 @@ app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
-app.get('health', (req, res) => {
+app.get('/health', (req, res) => {
     res.send('OK');
 })
-
 
 app.use('/api/auth', authRoutes);
 app.use('/api/movies', movieRoutes);

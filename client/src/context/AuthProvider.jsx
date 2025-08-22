@@ -26,7 +26,21 @@ const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+      // Dev-only hardcoded login for two accounts
+      const allowDevLogin = import.meta.env.MODE !== 'production';
+      if (allowDevLogin && (
+        (email === 'admin@gmail.com' && password === '123456') ||
+        (email === 'user@example.com' && password === 'password')
+      )) {
+        const role = email === 'admin@gmail.com' ? 'admin' : 'user';
+        const devUser = { id: 'dev-' + role, name: role === 'admin' ? 'Admin' : 'User', email, role };
+        setUser(devUser);
+        localStorage.setItem('user', JSON.stringify(devUser));
+        localStorage.setItem('token', 'dev-token');
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +69,7 @@ const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

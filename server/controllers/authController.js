@@ -44,6 +44,38 @@ const loginUser = async (req, res) => {
   }
 
   try {
+    // Development-only hardcoded login for testing
+    const allowDevLogin = process.env.ALLOW_DEV_LOGIN === 'true' || process.env.NODE_ENV !== 'production';
+    const devAccounts = {
+      'admin@gmail.com': { name: 'Admin', password: '123456' },
+      'user@example.com': { name: 'User', password: 'password' },
+    };
+
+    if (allowDevLogin && devAccounts[email] && password === devAccounts[email].password) {
+      try {
+        let user = await User.findOne({ email });
+        if (!user) {
+          const hashed = await bcrypt.hash(password, 10);
+          user = await User.create({ name: devAccounts[email].name, email, password: hashed });
+        }
+
+        const token = jwt.sign(
+          { id: user._id, email: user.email },
+          process.env.JWT_SECRET,
+          { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
+
+        return res.status(200).json({
+          message: 'Login successful (dev account)',
+          token,
+          user: { id: user._id, name: user.name, email: user.email },
+        });
+      } catch (e) {
+        console.error('Dev login failed:', e);
+        return res.status(500).json({ message: 'Server error' });
+      }
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
